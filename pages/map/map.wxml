@@ -1,0 +1,45 @@
+<!-- 地图页面 -->
+<view class="map-page">
+  <!-- 地图区域 -->
+  <map
+    id="photoMap"
+    class="map-container"
+    latitude="{{latitude}}"
+    longitude="{{longitude}}"
+    scale="{{scale}}"
+    markers="{{markers}}"
+    show-location
+    bindmarkertap="onMarkerTap"
+    bindregionchange="onRegionChange"
+  />
+
+  <!-- 底部信息面板 -->
+  <view class="bottom-panel" wx:if="{{selectedPhoto}}">
+    <view class="panel-card">
+      <image class="panel-image" src="{{selectedPhoto.paths[0]}}" mode="aspectFill" bindtap="previewSelectedPhoto" />
+      <view class="panel-info">
+        <text class="panel-desc">{{selectedPhoto.description || '暂无描述'}}</text>
+        <text class="panel-location">📍 {{selectedPhoto.location.name || selectedPhoto.location.address || '未知位置'}}</text>
+        <text class="panel-time">{{selectedPhoto.createTime}}</text>
+      </view>
+      <view class="panel-close" bindtap="closePanel">✕</view>
+    </view>
+  </view>
+
+  <!-- 统计浮层 -->
+  <view class="map-stats" wx:if="{{photosWithLocation.length > 0}}">
+    <text class="stats-label">📍 {{photosWithLocation.length}} 个位置标记</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="map-empty" wx:if="{{photosWithLocation.length === 0}}">
+    <text class="empty-icon">🗺</text>
+    <text class="empty-text">暂无带位置信息的图片</text>
+    <text class="empty-hint">上传图片时添加位置，即可在地图上显示</text>
+  </view>
+
+  <!-- 定位按钮 -->
+  <view class="locate-btn" bindtap="locateToUser">
+    <text>🎯</text>
+  </view>
+</view>

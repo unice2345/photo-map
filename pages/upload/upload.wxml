@@ -1,0 +1,55 @@
+<!-- 上传页面 -->
+<view class="container upload-page">
+  <!-- 图片选择区域 -->
+  <view class="card upload-card">
+    <view class="section-title">选择图片</view>
+    <view class="image-picker">
+      <view class="image-list">
+        <view class="image-item" wx:for="{{imageList}}" wx:key="index">
+          <image src="{{item}}" mode="aspectFill" bindtap="previewImage" data-index="{{index}}" />
+          <view class="remove-btn" catchtap="removeImage" data-index="{{index}}">✕</view>
+        </view>
+        <view class="image-item add-btn" bindtap="chooseImage" wx:if="{{imageList.length < 9}}">
+          <text class="add-icon">+</text>
+          <text class="add-text">添加图片</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 位置信息 -->
+  <view class="card location-card">
+    <view class="section-title">拍摄位置</view>
+    <view class="location-info" bindtap="chooseLocation">
+      <view class="location-icon">📍</view>
+      <view class="location-detail" wx:if="{{location.address}}">
+        <text class="location-name">{{location.name || '未知地点'}}</text>
+        <text class="location-address">{{location.address}}</text>
+        <text class="location-coords">{{location.latitude}}, {{location.longitude}}</text>
+      </view>
+      <view class="location-detail" wx:else>
+        <text class="location-placeholder">点击选择位置</text>
+        <text class="location-hint">添加图片位置信息，在地图上显示</text>
+      </view>
+      <view class="location-arrow">›</view>
+    </view>
+  </view>
+
+  <!-- 描述 -->
+  <view class="card desc-card">
+    <view class="section-title">图片描述</view>
+    <textarea
+      class="desc-input"
+      placeholder="为图片添加一段描述..."
+      value="{{description}}"
+      bindinput="onDescInput"
+      maxlength="200"
+      auto-height
+    />
+  </view>
+
+  <!-- 上传按钮 -->
+  <button class="btn-primary upload-btn" bindtap="savePhoto" disabled="{{imageList.length === 0}}">
+    保存图片
+  </button>
+</view>
