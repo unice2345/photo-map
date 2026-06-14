@@ -13,6 +13,13 @@ Page({
     description: ''
   },
 
+  onLoad() {
+    // 页面加载时提前获取用户信息授权，避免保存时的异步问题
+    app.requestUserProfile((userInfo) => {
+      console.log('用户信息已获取:', userInfo.nickName)
+    })
+  },
+
   // 选择图片
   chooseImage() {
     const remaining = 9 - this.data.imageList.length
@@ -107,35 +114,60 @@ Page({
   },
 
   // 保存照片
-  savePhoto() {
+  async savePhoto() {
     if (this.data.imageList.length === 0) {
       wx.showToast({ title: '请先选择图片', icon: 'none' })
       return
     }
 
-    wx.showLoading({ title: '保存中...' })
-
-    const photo = {
-      paths: this.data.imageList,
-      location: this.data.location,
-      description: this.data.description
+    if (!this.data.location.latitude) {
+      wx.showToast({ title: '请选择拍摄位置', icon: 'none' })
+      return
     }
 
-    app.addPhoto(photo)
+    wx.showLoading({ title: '上传图片中...', mask: true })
 
-    wx.hideLoading()
-    wx.showToast({ title: '保存成功', icon: 'success' })
+    try {
+      // 1. 上传图片到云存储
+      const cloudFileIds = await app.uploadImages(this.data.imageList)
+      if (cloudFileIds.length === 0) {
+        wx.hideLoading()
+        return  // uploadImages 已显示错误提示
+      }
 
-    // 重置表单
-    this.setData({
-      imageList: [],
-      location: {
-        name: '',
-        address: '',
-        latitude: 0,
-        longitude: 0
-      },
-      description: ''
-    })
+      wx.showLoading({ title: '保存信息中...', mask: true })
+
+      // 2. 保存照片信息到云数据库
+      const photo = {
+        paths: cloudFileIds,
+        location: this.data.location,
+        description: this.data.description
+      }
+
+      const result = await app.addPhoto(photo)
+      if (!result) {
+        wx.hideLoading()
+        return  // addPhoto 已显示错误提示
+      }
+
+      wx.hideLoading()
+      wx.showToast({ title: '上传成功', icon: 'success' })
+
+      // 重置表单
+      this.setData({
+        imageList: [],
+        location: {
+          name: '',
+          address: '',
+          latitude: 0,
+          longitude: 0
+        },
+        description: ''
+      })
+    } catch (err) {
+      wx.hideLoading()
+      console.error('保存照片异常:', err)
+      wx.showToast({ title: '上传失败: ' + (err.errMsg || '请重试'), icon: 'none' })
+    }
   }
 })

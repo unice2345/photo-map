@@ -7,7 +7,7 @@
 
   <!-- 照片列表 -->
   <view class="photo-list" wx:if="{{photos.length > 0}}">
-    <view class="card photo-card" wx:for="{{photos}}" wx:key="id">
+    <view class="card photo-card" wx:for="{{photos}}" wx:key="_id">
       <!-- 图片展示 -->
       <view class="photo-images">
         <image
@@ -15,7 +15,7 @@
           src="{{item.paths[0]}}"
           mode="aspectFill"
           bindtap="previewPhoto"
-          data-id="{{item.id}}"
+          data-id="{{item._id}}"
           data-index="0"
         />
         <view class="photo-count" wx:if="{{item.paths.length > 1}}">
@@ -25,22 +25,27 @@
 
       <!-- 照片信息 -->
       <view class="photo-info">
+        <!-- 用户信息 -->
+        <view class="photo-user" wx:if="{{item.user}}">
+          <image class="user-avatar" src="{{item.user.avatarUrl}}" mode="aspectFill" wx:if="{{item.user.avatarUrl}}" />
+          <text class="user-name">{{item.user.nickName || '匿名用户'}}</text>
+        </view>
         <text class="photo-desc" wx:if="{{item.description}}">{{item.description}}</text>
         <text class="photo-desc photo-desc-empty" wx:else>暂无描述</text>
         <view class="photo-meta">
           <text class="photo-location" wx:if="{{item.location.name}}">
             📍 {{item.location.name}}
           </text>
-          <text class="photo-time">{{item.createTime}}</text>
+          <text class="photo-time">{{item._displayTime}}</text>
         </view>
       </view>
 
       <!-- 操作按钮 -->
       <view class="photo-actions">
-        <view class="action-btn" catchtap="viewOnMap" data-id="{{item.id}}" wx:if="{{item.location.latitude}}">
+        <view class="action-btn" catchtap="viewOnMap" data-id="{{item._id}}" wx:if="{{item.location.latitude}}">
           <text>🗺 查看地图</text>
         </view>
-        <view class="action-btn action-delete" catchtap="deletePhoto" data-id="{{item.id}}">
+        <view class="action-btn action-delete" catchtap="deletePhoto" data-id="{{item._id}}">
           <text>🗑 删除</text>
         </view>
       </view>

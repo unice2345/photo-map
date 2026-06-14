@@ -56,6 +56,26 @@
   overflow: hidden;
 }
 
+/* 用户信息 */
+.panel-user {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.panel-avatar {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  margin-right: 10rpx;
+}
+
+.panel-nickname {
+  font-size: 24rpx;
+  color: #4A90D9;
+  font-weight: 500;
+}
+
 .panel-desc {
   font-size: 28rpx;
   color: #333;

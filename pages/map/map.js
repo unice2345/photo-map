@@ -26,20 +26,23 @@ Page({
     }
   },
 
-  // 加载标记点
-  loadMarkers() {
-    const photos = app.getPhotos()
+  // 加载标记点（从云数据库获取所有用户的照片）
+  async loadMarkers() {
+    wx.showLoading({ title: '加载中...' })
+    const photos = await app.getPhotos()
+    wx.hideLoading()
+
     const photosWithLocation = photos.filter(p => p.location && p.location.latitude)
-    const markers = photosWithLocation.map((photo, index) => ({
-      id: photo.id,
-      latitude: photo.latitude || photo.location.latitude,
-      longitude: photo.longitude || photo.location.longitude,
+    const markers = photosWithLocation.map((photo) => ({
+      id: photo._id,
+      latitude: photo.location.latitude,
+      longitude: photo.location.longitude,
       title: photo.description || photo.location.name || '图片',
       iconPath: '/images/marker.png',
       width: 32,
       height: 40,
       callout: {
-        content: photo.description || photo.location.name || '图片',
+        content: `${photo.user?.nickName || '匿名'}: ${photo.description || photo.location.name || '图片'}`,
         color: '#333',
         fontSize: 12,
         borderRadius: 8,
@@ -67,7 +70,7 @@ Page({
   // 点击标记
   onMarkerTap(e) {
     const markerId = e.detail.markerId
-    const photo = this.data.photosWithLocation.find(p => p.id === markerId)
+    const photo = this.data.photosWithLocation.find(p => p._id === markerId)
     if (photo) {
       this.setData({ selectedPhoto: photo })
     }
@@ -75,7 +78,7 @@ Page({
 
   // 聚焦到指定照片
   focusOnPhoto(photoId) {
-    const photo = this.data.photosWithLocation.find(p => p.id === photoId)
+    const photo = this.data.photosWithLocation.find(p => p._id === photoId)
     if (photo) {
       this.setData({
         latitude: photo.location.latitude,
@@ -89,9 +92,10 @@ Page({
   // 预览选中的照片
   previewSelectedPhoto() {
     if (this.data.selectedPhoto) {
+      const paths = this.data.selectedPhoto.paths
       wx.previewImage({
-        current: this.data.selectedPhoto.paths[0],
-        urls: this.data.selectedPhoto.paths
+        current: paths[0],
+        urls: paths
       })
     }
   },

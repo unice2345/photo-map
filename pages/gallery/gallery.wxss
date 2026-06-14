@@ -50,6 +50,26 @@
   padding: 20rpx 24rpx;
 }
 
+/* 用户信息 */
+.photo-user {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.user-avatar {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  margin-right: 12rpx;
+}
+
+.user-name {
+  font-size: 26rpx;
+  color: #4A90D9;
+  font-weight: 500;
+}
+
 .photo-desc {
   font-size: 28rpx;
   color: #333;

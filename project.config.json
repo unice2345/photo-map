@@ -1,5 +1,6 @@
 {
   "description": "项目配置文件",
+  "cloudfunctionRoot": "cloudfunctions/",
   "packOptions": {
     "ignore": [],
     "include": []
@@ -47,8 +48,8 @@
     "disableSWC": true
   },
   "compileType": "miniprogram",
-  "libVersion": "3.3.4",
-  "appid": "wx2fbaab22eb54a61c",
+  "libVersion": "3.16.1",
+  "appid": "wxfd96a8790b53d248",
   "projectname": "photo-map",
   "condition": {},
   "simulatorPluginLibVersion": {},

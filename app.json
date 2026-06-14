@@ -37,6 +37,7 @@
       }
     ]
   },
+  "cloud": true,
   "requiredPrivateInfos": [
     "chooseLocation",
     "getLocation"
