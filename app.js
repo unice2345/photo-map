@@ -1,3 +1,5 @@
+const envConfig = require('./config/env')
+
 App({
   onLaunch() {
     // 初始化云开发环境
@@ -7,7 +9,7 @@ App({
     }
 
     wx.cloud.init({
-      env: 'cloud1-d9gjpcebsb8fca4e9',
+      env: envConfig.cloudEnv,
       traceUser: true
     })
 

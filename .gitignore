@@ -3,3 +3,4 @@ node_modules/
 *.log
 .codebuddy/
 project.private.config.json
+config/env.js
