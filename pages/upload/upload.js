@@ -125,29 +125,17 @@ Page({
       return
     }
 
-    wx.showLoading({ title: '上传图片中...', mask: true })
+    wx.showLoading({ title: '上传中...', mask: true })
 
     try {
-      // 1. 上传图片到云存储
-      const cloudFileIds = await app.uploadImages(this.data.imageList)
-      if (cloudFileIds.length === 0) {
-        wx.hideLoading()
-        return  // uploadImages 已显示错误提示
-      }
-
-      wx.showLoading({ title: '保存信息中...', mask: true })
-
-      // 2. 保存照片信息到云数据库
-      const photo = {
-        paths: cloudFileIds,
+      const result = await app.savePhotos({
+        imageList: this.data.imageList,
         location: this.data.location,
         description: this.data.description
-      }
-
-      const result = await app.addPhoto(photo)
+      })
       if (!result) {
         wx.hideLoading()
-        return  // addPhoto 已显示错误提示
+        return  // savePhotos 内部已处理错误提示
       }
 
       wx.hideLoading()

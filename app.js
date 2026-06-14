@@ -106,8 +106,10 @@ App({
   async addPhoto(photo) {
     try {
       const userInfo = this.getUserInfo()
+      // 剔除 _id / _openid 等云数据库保留字段，避免 add 操作冲突
+      const { _id, _openid, ...cleanPhoto } = photo || {}
       const data = {
-        ...photo,
+        ...cleanPhoto,
         user: {
           nickName: userInfo.nickName,
           avatarUrl: userInfo.avatarUrl
@@ -116,12 +118,31 @@ App({
         likes: 0
       }
       const result = await this.photosCollection.add({ data })
+      // serverDate() 由服务端写入真实时间；此处返回本地近似时间供前端即时展示
       return { ...data, _id: result._id, createTime: new Date() }
     } catch (err) {
       console.error('添加照片失败:', err)
       wx.showToast({ title: '保存失败，请重试', icon: 'none' })
       return null
     }
+  },
+
+  // ---------- 业务层接口（页面应只调用这些） ----------
+
+  // 保存一组照片：上传文件 → 写入数据库（页面无需关心底层是云还是本地）
+  async savePhotos({ imageList, location, description }) {
+    if (!imageList || imageList.length === 0) return null
+
+    // 1. 上传图片文件到云存储
+    const cloudFileIds = await this.uploadImages(imageList)
+    if (cloudFileIds.length === 0) return null
+
+    // 2. 将元信息写入云数据库
+    return this.addPhoto({
+      paths: cloudFileIds,
+      location,
+      description
+    })
   },
 
   // 删除照片（仅允许删除自己的）
