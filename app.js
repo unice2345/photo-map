@@ -55,10 +55,24 @@ App({
     return { nickName: '匿名用户', avatarUrl: '' }
   },
 
+  // 获取当前用户的 openid（自动缓存，复用云函数调用结果）
+  async getMyOpenid() {
+    if (this._myOpenid) return this._myOpenid
+    try {
+      const res = await wx.cloud.callFunction({ name: 'getOpenId' })
+      this._myOpenid = res.result.openid
+      return this._myOpenid
+    } catch (err) {
+      console.error('获取 openid 失败:', err)
+      return null
+    }
+  },
+
   // 请求用户授权获取头像昵称（必须在用户点击事件中调用）
   requestUserProfile(callback) {
     const cached = wx.getStorageSync('userInfo')
-    if (cached) {
+    // 匿名缓存不算有效缓存，需要重新授权
+    if (cached && cached.nickName !== '匿名用户') {
       callback && callback(cached)
       return
     }
@@ -69,9 +83,8 @@ App({
         callback && callback(res.userInfo)
       },
       fail: () => {
-        const anonymous = { nickName: '匿名用户', avatarUrl: '' }
-        wx.setStorageSync('userInfo', anonymous)
-        callback && callback(anonymous)
+        // 不缓存匿名数据，下次点击保存时可重新授权
+        callback && callback({ nickName: '匿名用户', avatarUrl: '' })
       }
     })
   },
@@ -108,6 +121,7 @@ App({
   async addPhoto(photo) {
     try {
       const userInfo = this.getUserInfo()
+      const openid = await this.getMyOpenid()
       // 剔除 _id / _openid 等云数据库保留字段，避免 add 操作冲突
       const { _id, _openid, ...cleanPhoto } = photo || {}
       const data = {
@@ -116,6 +130,7 @@ App({
           nickName: userInfo.nickName,
           avatarUrl: userInfo.avatarUrl
         },
+        creatorOpenid: openid,     // 记录创建者，用于删除时的所有权校验
         createTime: this.db.serverDate(),
         likes: 0
       }
@@ -147,14 +162,40 @@ App({
     })
   },
 
-  // 删除照片（仅允许删除自己的）
+  // 删除照片（仅允许删除自己上传的）
   async deletePhoto(id) {
     try {
+      // 1. 先读取照片信息，核对所有权
+      const { data: photo } = await this.photosCollection.doc(id).get()
+      const myOpenid = await this.getMyOpenid()
+
+      // 无法获取当前用户 openid → 拒绝
+      if (!myOpenid) {
+        wx.showToast({ title: '获取用户信息失败，请重试', icon: 'none' })
+        return false
+      }
+      // 无法确认创建者（旧数据无 creatorOpenid）→ 拒绝
+      if (!photo.creatorOpenid) {
+        wx.showToast({ title: '该照片无创建者信息，无法删除', icon: 'none' })
+        return false
+      }
+      // openid 不匹配 → 拒绝
+      if (photo.creatorOpenid !== myOpenid) {
+        wx.showToast({ title: '仅可删除自己上传的照片', icon: 'none' })
+        return false
+      }
+
+      // 2. 所有权验证通过，执行删除
       await this.photosCollection.doc(id).remove()
       return true
     } catch (err) {
       console.error('删除照片失败:', err)
-      wx.showToast({ title: '删除失败，仅可删除自己的照片', icon: 'none' })
+      const errMsg = err.errMsg || err.message || ''
+      if (errMsg.includes('not found') || errMsg.includes('not exist')) {
+        wx.showToast({ title: '该照片已不存在', icon: 'none' })
+      } else {
+        wx.showToast({ title: '删除失败，请重试', icon: 'none' })
+      }
       return false
     }
   },

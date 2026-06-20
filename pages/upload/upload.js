@@ -14,10 +14,7 @@ Page({
   },
 
   onLoad() {
-    // 页面加载时提前获取用户信息授权，避免保存时的异步问题
-    app.requestUserProfile((userInfo) => {
-      console.log('用户信息已获取:', userInfo.nickName)
-    })
+    // 用户信息将在保存时通过点击事件触发获取
   },
 
   // 选择图片
@@ -124,6 +121,11 @@ Page({
       wx.showToast({ title: '请选择拍摄位置', icon: 'none' })
       return
     }
+
+    // 在用户点击事件中请求授权（wx.getUserProfile 必须在 tap 调用栈中）
+    await new Promise((resolve) => {
+      app.requestUserProfile(() => resolve())
+    })
 
     wx.showLoading({ title: '上传中...', mask: true })
 
