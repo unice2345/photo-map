@@ -24,33 +24,69 @@ Page({
       app._pendingMapPhotoId = null
       this.focusOnPhoto(photoId)
     }
+
+    // ★ 先注册回调，再消费通知——防止在消费和注册之间漏掉 watch 事件
+    app._onPhotosChanged = (newCount) => {
+      console.log('🗺 _onPhotosChanged 触发, newCount:', newCount)
+      this.loadMarkers(true)
+      wx.showToast({ title: `${newCount} 张新照片 🆕`, icon: 'none', duration: 2000 })
+    }
+
+    const count = app.consumeNewPhotoCount()
+    if (count > 0) {
+      wx.showToast({ title: `${count} 张新照片 🆕`, icon: 'none', duration: 2500 })
+    }
   },
 
-  // 加载标记点（从云数据库获取所有用户的照片）
-  async loadMarkers() {
-    wx.showLoading({ title: '加载中...' })
-    const photos = await app.getPhotos()
-    wx.hideLoading()
+  onHide() {
+    // 离开地图页面时取消回调 + 清除新照片高亮标记
+    app._onPhotosChanged = null
+    app.clearNewPhotoFlags()
+  },
 
-    const photosWithLocation = photos.filter(p => p.location && p.location.latitude)
-    const markers = photosWithLocation.map((photo) => ({
+  // 构建单个标记点
+  buildMarker(photo) {
+    const isNew = app.isNewPhoto(photo._id)
+    return {
       id: photo._id,
       latitude: photo.location.latitude,
       longitude: photo.location.longitude,
       title: photo.description || photo.location.name || '图片',
       iconPath: '/images/marker.png',
-      width: 32,
-      height: 40,
+      width: 36,
+      height: 45,
+      // 新照片添加 "新" 标签
+      label: isNew ? {
+        content: '新',
+        color: '#fff',
+        fontSize: 10,
+        bgColor: '#e74c3c',
+        borderRadius: 4,
+        padding: 3,
+        anchorX: 5,
+        anchorY: -5
+      } : undefined,
+      // 新照片 callout 高亮：红色系文字 + 浅红背景
       callout: {
-        content: `${photo.user?.nickName || '匿名'}: ${photo.description || photo.location.name || '图片'}`,
-        color: '#333',
-        fontSize: 12,
+        content: `${isNew ? '🆕 ' : ''}${photo.user?.nickName || '匿名'}: ${photo.description || photo.location.name || '图片'}`,
+        color: isNew ? '#e74c3c' : '#333',
+        fontSize: isNew ? 13 : 12,
         borderRadius: 8,
-        bgColor: '#fff',
-        padding: 8,
+        bgColor: isNew ? '#fff0f0' : '#fff',
+        padding: isNew ? 10 : 8,
         display: 'BYCLICK'
       }
-    }))
+    }
+  },
+
+  // 加载标记点（silent: true 时不显示 loading）
+  async loadMarkers(silent = false) {
+    if (!silent) wx.showLoading({ title: '加载中...' })
+    const photos = await app.getPhotos()
+    if (!silent) wx.hideLoading()
+
+    const photosWithLocation = photos.filter(p => p.location && p.location.latitude)
+    const markers = photosWithLocation.map(p => this.buildMarker(p))
 
     this.setData({
       markers,
@@ -70,9 +106,17 @@ Page({
   // 点击标记
   onMarkerTap(e) {
     const markerId = e.detail.markerId
-    const photo = this.data.photosWithLocation.find(p => p._id === markerId)
-    if (photo) {
-      this.setData({ selectedPhoto: photo })
+    const photoIndex = this.data.photosWithLocation.findIndex(p => p._id === markerId)
+    if (photoIndex < 0) return
+
+    const photo = this.data.photosWithLocation[photoIndex]
+    this.setData({ selectedPhoto: photo })
+
+    // 仅清除当前浏览照片的 "新" 标记
+    if (app.markPhotoAsSeen(markerId)) {
+      const markers = [...this.data.markers]
+      markers[photoIndex] = this.buildMarker(photo)
+      this.setData({ markers })
     }
   },
 

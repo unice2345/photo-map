@@ -18,6 +18,9 @@ App({
 
     // 校验云环境是否可连通
     this.checkCloudReady()
+
+    // 启动新照片实时监听
+    this.initPhotoWatcher()
   },
 
   // 检查云环境连通性
@@ -45,6 +48,85 @@ App({
         this.cloudReady = false
       }
     }
+  },
+
+  // ---------- 新照片实时监听 ----------
+
+  // 初始化照片监听器（启动后自动获取 openid，排除自己的上传）
+  async initPhotoWatcher() {
+    // 提前初始化，防止 isNewPhoto / clearNewPhotoFlags 在 undefined 上操作
+    this._newPhotoCount = 0
+    this._newPhotoIds = new Set()
+
+    try {
+      await this.getMyOpenid()
+      if (!this._myOpenid) {
+        console.warn('👂 新照片通知: 无法获取 openid，功能暂不可用')
+        return
+      }
+      this._photoWatcher = this.photosCollection.watch({
+        onChange: (snapshot) => {
+          console.log('👂 watch onChange 触发, docChanges:', snapshot.docChanges.length)
+          const myId = this._myOpenid
+          const adds = snapshot.docChanges.filter(c => {
+            if (c.dataType !== 'add') return false
+            if (!c.doc || !c.doc.creatorOpenid) {
+              // 云数据库 watch 下 doc 可能不完整，无法判断创建者时保守处理（跳过）
+              console.warn('👂 新增文档缺少 creatorOpenid，无法过滤:', c.docId)
+              return false
+            }
+            return c.doc.creatorOpenid !== myId
+          })
+          if (adds.length > 0) {
+            adds.forEach(c => {
+              const id = c.doc._id || c.docId
+              if (id) {
+                this._newPhotoIds.add(id)
+              }
+            })
+            this._newPhotoCount += adds.length
+            console.log('👂 新增他人照片:', adds.length, '总计:', this._newPhotoCount, 'ids:', [...this._newPhotoIds])
+            if (this._onPhotosChanged) {
+              this._onPhotosChanged(adds.length)  // 传本次新增数量，而非累计
+            }
+          }
+        },
+        onError: (err) => {
+          console.error('👂 照片监听出错:', err)
+        }
+      })
+      console.log('👂 新照片监听已启动')
+    } catch (err) {
+      console.warn('👂 新照片监听启动失败:', err)
+    }
+  },
+
+  // 消费新照片计数（页面显示通知后调用，避免重复提示）
+  consumeNewPhotoCount() {
+    const count = this._newPhotoCount || 0
+    this._newPhotoCount = 0
+    return count
+  },
+
+  // 检查某张照片是否为新照片（消费后仍保留 ID，供 marker 渲染使用）
+  isNewPhoto(photoId) {
+    return this._newPhotoIds && this._newPhotoIds.has(photoId)
+  },
+
+  // 清空新照片标记（用户切换页面后清除高亮）
+  clearNewPhotoFlags() {
+    if (this._newPhotoIds) {
+      this._newPhotoIds.clear()
+    }
+  },
+
+  // 标记某张照片已浏览（仅清除这一张的 new 标记）
+  markPhotoAsSeen(photoId) {
+    if (this._newPhotoIds && this._newPhotoIds.has(photoId)) {
+      this._newPhotoIds.delete(photoId)
+      return true  // 确实清除了
+    }
+    return false
   },
 
   // 同步获取缓存的用户信息（不弹窗请求）
